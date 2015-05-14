@@ -195,3 +195,9 @@ POST /notemplate1-test3/_search
   }
 }
 
+PUT /notemplate-test5/
+{
+     "index" : {
+         "search.slowlog.threshold.query.trace": "50ms"
+    }
+}
