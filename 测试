@@ -1,0 +1,197 @@
+
+
+模板
+PUT /_template/template_2
+{
+  "order": 1,
+  "template": "notemplate1*",
+  "settings": {
+    "index.number_of_replicas": "1",
+    "index.number_of_shards": "4",
+    "index.refresh_interval": "30s",
+    "index.gateway.local.sync": "120s",
+    "index.translog.flush_threshold_size": "512m",
+    "index.merge.policy.max_merged_segment": "1g",
+    "index.merge.scheduler.max_merge_count": 4,
+    "index.merge.scheduler.max_thread_count": 1
+  },
+  "mappings": {
+    "_default_": {
+      "_all": {
+        "enabled": false
+      }
+    },
+    "employee": {
+      "_all": {
+        "enabled": false
+      },
+      "properties": {
+        "@message": {
+          "type": "string",
+          "index_options": "docs"
+        },
+        "@timestamp": {
+          "index": "not_analyzed",
+          "type": "date",
+          "format": "dateOptionalTime",
+          "doc_values": true,
+          "fielddata": {
+            "format": "doc_value"
+          }
+        },
+        "method": {
+          "type": "string",
+          "index": "not_analyzed",
+          "doc_values": true,
+          "fielddata": {
+            "format": "doc_value"
+          }
+        },
+        "response": {
+          "type": "integer",
+          "index": "not_analyzed",
+          "doc_values": true,
+          "fielddata": {
+            "format": "doc_value"
+          }
+        },
+        "size": {
+          "type": "integer",
+          "index": "no",
+          "doc_values": true,
+          "fielddata": {
+            "format": "doc_value"
+          }
+        },
+        "srcip": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "status": {
+          "type": "string",
+          "index": "no",
+          "doc_values": true,
+          "fielddata": {
+            "format": "doc_value"
+          }
+        },
+        "status_code": {
+          "type": "string",
+          "index": "no",
+          "doc_values": true,
+          "fielddata": {
+            "format": "doc_value"
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+https://github.com/elastic/elasticsearch/commit/b3060afa9f12697bc41ea682798ac35ee8c99595
+
+
+
+
+
+
+
+POST /notemplate-test1/_search
+{
+
+  "size": 0, 
+  "aggregations" : {
+    "range1" : {
+      "range" : {
+        "script" : "doc['response'].value",
+        "ranges" : [ {
+          "from" : 1.0,
+          "to" : 2.0
+        } ]
+      }
+    }
+  }
+}
+
+
+POST /notemplate-test1/_search
+{
+  "size": 0,
+  "aggregations": {
+    "range1": {
+      "date_range": {
+        "field": "@timestamp",
+        "format": "yyyy-MM",
+        "script": "doc['@timestamp'].value",
+        "ranges": [
+          {
+            "to": "now"
+          },
+          {
+            "from": "now-10M/M"
+          }
+        ]
+      }
+    }
+  }
+}
+
+
+POST /notemplate1-test3/_search
+{
+  "size": 0,
+  "query": {
+    "match_all": {}
+  },
+  "aggs": {
+    "agg1": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "interval": "day",
+        "post_zone": "+08:00"
+      },
+      "aggs": {
+        "term1": {
+          "top_hits": {
+              "_source": {
+              "include": []
+            },
+             "fielddata_fields" : ["status", "response"],
+            "size": 10
+          }
+        }
+      }
+    }
+  }
+}
+
+
+POST /notemplate1-test3/_search
+{
+  "fields": ["status"], 
+  "size": 10, 
+  "aggs": {
+    "agg1": {
+      "terms": {
+        "field": "status",
+        "size": 10
+      }
+    }
+  }
+}
+
+
+POST /notemplate1-test3/_search
+{
+  "fields": [
+    "_source"
+  ],
+  "post_filter": {
+    "script": {
+      "script": "doc['status'].value =='404' && doc['size'].value==901"
+    }
+  }
+}
+
